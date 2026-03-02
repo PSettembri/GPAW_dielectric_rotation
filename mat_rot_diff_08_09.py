@@ -43,6 +43,9 @@ etav = 0.01
 ecutv = 50
 nbandsv = 50
 
+#method = "RPA"
+method = "ALDA"
+
 # Parameters for the frequency grid
 domega0 = 0.05
 omega2 = 10
@@ -265,7 +268,7 @@ for iq in range(nqirr):
     #q_c = [-0.25 , 0.5 , 0.5]
 
     # The modified GPAW function to compute eps_GG(q,w) is called
-    eps0 , eps = df.get_full_dielectric_function(q_c=q_c, filename="eps_%d.csv" % iq)
+    eps0 , eps = df.get_full_dielectric_function(q_c=q_c, xc=f'{method}', filename="eps_%d.csv" % iq)
    
     del eps0 
 
