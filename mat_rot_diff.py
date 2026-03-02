@@ -26,30 +26,30 @@ start_time = time.time()
 
 # File name
 
-name = "mgb2_20_20_16_600"
-name_reduced = "mgb2_10_10_8_600"
+name = "si_20_400"
+name_reduced = "si_20_400"
 
-metal = True
-#metal = False
+#metal = True
+metal = False
 
 #reduced = True
 reduced = False
 
-tensor = True
-#tensor = False
+#tensor = True
+tensor = False
 
 # Dielectric function parameters
-etav = 0.01
-ecutv = 50
-nbandsv = 50
+etav = 0.001
+ecutv = 400
+nbandsv = 70
 
 #method = "RPA"
 method = "ALDA"
 
 # Parameters for the frequency grid
-domega0 = 0.05
+domega0 = 0.1
 omega2 = 10
-omegamax = 50
+omegamax = 200
 
 ##############################
 
@@ -461,7 +461,7 @@ if tensor :
     for dir in ['x','y','z']:
         q_c = [0.0, 0.0 , 0.0]
 
-        g_eps0 , g_eps = df.get_dielectric_function(q_c=q_c, direction=dir)
+        g_eps0 , g_eps = df.get_dielectric_function(q_c=q_c, xc=f'{method}', direction=dir)
 
         with open(f"eps_G_{dir}{dir}.dat", "w") as fd:
             for iw in range(nw):
