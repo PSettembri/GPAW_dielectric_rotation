@@ -462,8 +462,8 @@ class InverseDielectricFunction(DielectricFunctionData):
         eps_WG = np.zeros((len(self.wd.omega_w),len(self.v_G)),dtype=complex)
 
         for ig in range(len(self.v_G)):
-            eps0_WG[:,ig] = 1 - vchi0_WGG[:,ig,ig]
-            eps_WG[:,ig] = 1 / (1 + vchi_WGG[:,ig,ig])
+            eps0_WG[:,ig] = 1 - self.wblocks.all_gather(vchi0_WGG[:,ig,ig])
+            eps_WG[:,ig] = 1 / (1 + self.wblocks.all_gather(vchi_WGG[:,ig,ig]))
         
         return ScalarResponseFunctionSet(self.wd,eps0_WG,eps_WG)
 
@@ -942,7 +942,7 @@ def write_vector_response_function(filename, omega_w, rf0_wG, rf_wG):
             print(ig,file=fd)
             print(' ',file=fd)
             for omega, rf0, rf in zip(omega_w, rf0_wG[:,ig], rf_wG[:,ig]):
-                print('%.6f, %.6f, %.6f, %.6f, %.6f' %
+                print('%.6f, %.10f, %.10f, %.10f, %.10f' %
                       (omega, rf0.real, rf0.imag, rf.real, rf.imag),
                       file=fd)
 
