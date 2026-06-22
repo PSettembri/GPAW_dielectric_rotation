@@ -1,3 +1,5 @@
+#dentro /miniconda3/envs/gpaw/lib/python3.12/site-packages/gpaw/response
+#serve python 3.12 e gpaw 24.6.0
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -809,7 +811,7 @@ class DielectricFunction(DielectricFunctionCalculator):
         return df.unpack()
 
 
-    def get_full_dielectric_function(self, *args, filename='df_full.csv', **kwargs):
+    def get_full_dielectric_function(self, *args, filename='df_full.csv', dump_name='dump.txt', write_all=False, **kwargs):
         """Calculate the full dielectric function.
 
         Generates a file 'df_full.csv', unless filename is set to None.
@@ -824,14 +826,20 @@ class DielectricFunction(DielectricFunctionCalculator):
 
         dg = self.get_calc_G(*args, **kwargs)
 
-        with open('dump.txt','w') as dump:
+        with open(dump_name,'w') as dump:
             for row in range(len(dg)):
                 dump.write(f"{dg[row,0]:.6f}, {dg[row,1]:.6f}, {dg[row,2]:.6f}\n")
 
         df = self.get_inverse_dielectric_function(
             *args, **kwargs).full_dielectric_matrix()
+        
         if filename:
-            df.write2(filename)
+            if write_all:
+                df.write3(filename)
+            else:
+                df.write2(filename)
+
+
         return df.unpack()
 
 
@@ -917,6 +925,10 @@ class ScalarResponseFunctionSet:
         if mpi.rank == 0:
             write_vector_response_function(filename, *self.arrays)
 
+    def write3(self, filename):
+        if filename is not None:
+            write_vector_response_function(filename, *self.arrays)
+
     @property
     def static_limit(self):
         """Return the value of the response functions in the static limit."""
@@ -942,7 +954,7 @@ def write_vector_response_function(filename, omega_w, rf0_wG, rf_wG):
             print(ig,file=fd)
             print(' ',file=fd)
             for omega, rf0, rf in zip(omega_w, rf0_wG[:,ig], rf_wG[:,ig]):
-                print('%.6f, %.10f, %.10f, %.10f, %.10f' %
+                print('%.6f, %.6f, %.6f, %.6f, %.6f' %
                       (omega, rf0.real, rf0.imag, rf.real, rf.imag),
                       file=fd)
 

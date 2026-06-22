@@ -1,4 +1,7 @@
 # GPAW_dielectric_rotation
+Modified version from Federico Giannessi.
+Main difference: parallelization over q points.
+
 Python scripts for the use of symmetries in the calculation of dielectric functions in GPAW
 
 The modified symmetry.py file must be moved inside gpaw folder.
