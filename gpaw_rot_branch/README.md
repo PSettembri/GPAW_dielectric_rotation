@@ -7,70 +7,28 @@ The modified symmetry.py file must be moved inside gpaw folder. The coulomb_kern
 
 All codes can be run in parallel using mpirun -n x gpaw python y.py, from within the conda environment where GPAW has been installed. interp_mod.py can also be run using just mpirun -n x python interp_mod.py.
 
+prep.py prepares the auxiliary files required by the modified GPAW response calculation. It reads the .gpw ground-state file and crystal symmetries, determines the irreducible/full Brillouin-zone k-point mappings, and generates the frequency grid.
+The generated files are then used by the subsequent modified-GPAW calculations.
 
-The `prep.py` script prepares the auxiliary files required by the modified GPAW response workflow. It must be run **serially on a single processor**.
+mat_para.py calculates the dielectric function on the irreducible Brillouin zone using GPAW and reconstructs the corresponding dielectric data on the full k-point grid using crystal symmetries.
+The calculation is distributed over MPI processes, with all processes working on the same irreducible q-point at once. The main parameters are set in the calculate_df() call at the end of the script.
+The script also generates the frequency grid, q-point list, rotated G-vectors, and the full reconstructed dielectric-function grid used by the subsequent interpolation/post-processing steps.
 
-Starting from a GPAW `.gpw` ground-state file, the script:
+mat_diff.py performs the same dielectric-function calculation as mat.py, but distributes the irreducible q-points across MPI processes, with each process handling one q-point at a time.
 
-* reads the crystal structure and reciprocal lattice vectors;
-* extracts the irreducible and full Brillouin-zone k-point grids and their weights;
-* determines the mapping between full-zone and irreducible k-points using the crystal symmetries;
-* reads the symmetry matrices from `symmetries.txt`;
-* accounts for time-reversal symmetry when constructing the symmetry-operation mappings;
-* determines the integer reciprocal-lattice translations required to map full-zone k-points onto their symmetry-equivalent irreducible k-points;
-* constructs the corresponding inverse symmetry mappings;
-* generates the nonlinear frequency grid used by the response calculation;
-* writes the resulting mappings and auxiliary data to files for use by the subsequent modified-GPAW calculations.
+interp_new.py reads the rotated dielectric-function data and interpolates it onto user-defined q-space grids. Four interpolation/averaging modes are available:
+fibonacci — interpolates on spherical shells sampled using a Fibonacci sphere and computes the angular average.
+regular — interpolates on a regular spherical grid defined by radial, polar, and azimuthal points.
+average — directly averages the existing dielectric-function data in radial q-bins.
+direction — interpolates along one or more specified crystallographic directions.
+The interpolation can be performed with linear or logarithmic radial spacing. The calculations are MPI-parallelized over frequencies.
+The main parameters are set in the main() call at the end of the script:
 
-The main output files are:
-
-```text
-U_scc.npy          Symmetry-operation matrices
-U_scc_inv.npy      Inverse symmetry-operation matrices
-sym_k_2.npy        Symmetry operation for each full-zone k-point
-sym_k_2_inv.npy    Inverse symmetry operation for each k-point
-N_vec_first.npy    Reciprocal-lattice translation for the forward mapping
-N_vec.npy          Reciprocal-lattice translation for the inverse mapping
-b_vectors.dat      Reciprocal lattice vectors
-w_list             Frequency grid
-qirr_rot.txt       Human-readable k-point/symmetry mapping
-```
-
-These files provide the information required to reconstruct quantities calculated on the irreducible Brillouin zone over the full Brillouin zone, including the corresponding symmetry transformations and reciprocal-lattice translations.
-
-### Input parameters
-
-The main parameters are defined near the beginning of the script:
-
-```python
-name = "al"
-domega0 = 0.1
-omega2 = 100
-omegamax = 1050
-```
-
-where `name` specifies the input `.gpw` file and `domega0`, `omega2`, and `omegamax` define the nonlinear frequency grid.
-
-The script expects the corresponding GPAW file
-
-```text
-<name>.gpw
-```
-
-and the symmetry operations in
-
-```text
-symmetries.txt
-```
-
-### Usage
-
-Run the script once using a single processor:
-
-```bash
-gpaw python prep.py
-```
-
-The generated files are then used by the subsequent response calculations.
-
-
+main(
+    function='fibonacci',
+    r_min=264,
+    r_max=14500,
+    num_r=381,
+    logarithmic=False)
+For directional interpolation, the name of the .gpw file must be give and crystallographic directions can be specified through crystal_dirs, e.g.
+crystal_dirs=((1, 0, 0), (0, 0, 1), (1, 1, 1))

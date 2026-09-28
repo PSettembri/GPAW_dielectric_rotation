@@ -1,4 +1,4 @@
-# mat_diff.py (OPTIMIZED + MEMORY SAFE)
+# mat_diff.py
 #each process run independent dielectric calculation
 import numpy as np
 from pathlib import Path
