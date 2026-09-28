@@ -1,5 +1,5 @@
 GPAW_dielectric_rotation
-Modified version from Federico Giannessi. Main difference: parallelization over q points, a few quality of life updates
+Modified version from Federico Giannessi. Main difference: parallelization over q points, a few quality of life updates.
 
 Python scripts for the use of symmetries in the calculation of dielectric functions in GPAW
 
@@ -7,10 +7,70 @@ The modified symmetry.py file must be moved inside gpaw folder. The coulomb_kern
 
 All codes can be run in parallel using mpirun -n x gpaw python y.py, from within the conda environment where GPAW has been installed. interp_mod.py can also be run using just mpirun -n x python interp_mod.py.
 
-prep.py is the ground state + nscf calculation script which has to be performed before computing any dielectric function. A restarting .gpw file is created. Important parameters are the size of the k-point grid and the wavefunctions plane wave cutoff.
 
-eps.py is an example of the standard workflow to compute the dielectric function in GPAW. It computes the macroscopic dielectric function for q-points within the nscf calculation grid and along a line. Calculations at Gamma+G will lead to NaN. Weird behaviour at large wavevectors unless ecut is increased.
+The `prep.py` script prepares the auxiliary files required by the modified GPAW response workflow. It must be run **serially on a single processor**.
 
-mat_rot_diff.py allows for the calculation of the microscopic dielectric function at finite momentum q, limiting the calculations to the irreducible Brillouin zone and using the crystal symmetries to rotate the dielectric function in the full reciprocal space. Main input parameters include: name and name_reduced - name of the restart files (.gpw excluded), if reduced is set to true, name_reduced will be used to generate the q-point grid and the associated symmetry information. Wavefunctions and eigenvalues will be gathered instead from the name.gpw calculation. The name calculation must be on a grid that is an integer multiple of the reduced one (e.g. 20x20x20 vs 10x10x10). metal - set to True if the material has a zero - or close to zero band gap, changes the call on the Dielectric Function descriptor. tensor - if set to true three calculations at gamma are performed to evaluate e_xx, e_yy and e_zz. etav - dielectric function broadening parameter. ecutv - wavefunction cutoff for the dielectric function - usually set equal to the nscf wavefunction one. nbandsv - number of considered bands - usually set to the nscf calculation value. method - selects the used level of approximation used, RPA or ALDA domega0, omega2, omegamax - frequency grid descriptors, see GPAW documentation for the expression.
+Starting from a GPAW `.gpw` ground-state file, the script:
 
-interp_mod.py reads the rotated dielectric function and performs an interpolation on a defined set of points. Two modes are available: 1 - interpolation_Montecarlo_Fibonacci_parallel) generates a set of homogeneously sampled spheres using the Fibonacci sphere, then it randomly extracts a given amount of points on the spheres. Finally it interpolates the dielectric function on the generated points. 2 - interpolation_line_parallel) interpolates along a given direction in reciprocal space, usually defined in cartesian units but can also be defined in fractional. The number of samples spheres and their radius can be changed together. If scissor_correction is set to True additional files will be generated where the dielectric function is translated in frequency by the input parameter s (difference between experimental and theoretical band gap). If Tensor is set to True, for the spherical sample at Gamma the dielectric function will be substituted by the average (e_xx + e_yy + e_zz)/3, for the interpolation on a line the dielectric function at gamma is projected along the q direction (e_xxq_x^2 + e_yyq_y^2 + e_zz*q_z^2)
+* reads the crystal structure and reciprocal lattice vectors;
+* extracts the irreducible and full Brillouin-zone k-point grids and their weights;
+* determines the mapping between full-zone and irreducible k-points using the crystal symmetries;
+* reads the symmetry matrices from `symmetries.txt`;
+* accounts for time-reversal symmetry when constructing the symmetry-operation mappings;
+* determines the integer reciprocal-lattice translations required to map full-zone k-points onto their symmetry-equivalent irreducible k-points;
+* constructs the corresponding inverse symmetry mappings;
+* generates the nonlinear frequency grid used by the response calculation;
+* writes the resulting mappings and auxiliary data to files for use by the subsequent modified-GPAW calculations.
+
+The main output files are:
+
+```text
+U_scc.npy          Symmetry-operation matrices
+U_scc_inv.npy      Inverse symmetry-operation matrices
+sym_k_2.npy        Symmetry operation for each full-zone k-point
+sym_k_2_inv.npy    Inverse symmetry operation for each k-point
+N_vec_first.npy    Reciprocal-lattice translation for the forward mapping
+N_vec.npy          Reciprocal-lattice translation for the inverse mapping
+b_vectors.dat      Reciprocal lattice vectors
+w_list             Frequency grid
+qirr_rot.txt       Human-readable k-point/symmetry mapping
+```
+
+These files provide the information required to reconstruct quantities calculated on the irreducible Brillouin zone over the full Brillouin zone, including the corresponding symmetry transformations and reciprocal-lattice translations.
+
+### Input parameters
+
+The main parameters are defined near the beginning of the script:
+
+```python
+name = "al"
+domega0 = 0.1
+omega2 = 100
+omegamax = 1050
+```
+
+where `name` specifies the input `.gpw` file and `domega0`, `omega2`, and `omegamax` define the nonlinear frequency grid.
+
+The script expects the corresponding GPAW file
+
+```text
+<name>.gpw
+```
+
+and the symmetry operations in
+
+```text
+symmetries.txt
+```
+
+### Usage
+
+Run the script once using a single processor:
+
+```bash
+gpaw python prep.py
+```
+
+The generated files are then used by the subsequent response calculations.
+
+

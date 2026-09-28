@@ -1,4 +1,4 @@
-# PREPRAES THE FILES TO BE READ BY MAT_GPT. RUN ON ONLY 1 PROCESSOR
+# PREPRAES THE FILES TO BE READ. RUN ON ONLY 1 PROCESSOR
 import numpy as np
 from pathlib import Path
 from ase.io import read
